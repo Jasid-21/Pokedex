@@ -1,7 +1,10 @@
 <template>
   <div class="list-container">
     <PkmnFilter />
-    <ul class="list">
+    <span class="counter" v-if="curr_entries < total">
+        {{ curr_entries}} / <strong>{{ total }}</strong>
+    </span>
+    <ul v-else class="list">
         <li v-for="e of entries" :key="e">
             <PkmnItem :sprite="e.sprites.front_default" :name="e.name" :types="e.types" :id="e.id" />
         </li>
@@ -14,7 +17,7 @@ import PkmnItem from './PkmnItem.vue';
 import PkmnFilter from './PkmnFilter.vue';
 
 import { useStore } from 'vuex';
-import { computed } from '@vue/runtime-core';
+import { computed, ref } from '@vue/runtime-core';
 
 export default {
     name: "PokemonList",
@@ -26,18 +29,18 @@ export default {
     setup() {
         async function fill_array() {
             try {
-                console.log("Enter here");
                 const url = 'https://pokeapi.co/api/v2/pokedex/1/';
                 const entries = await fetch(url, {method: 'GET'});
                 const j_entries = await entries.json();
+                total.value = j_entries.pokemon_entries.length;
 
                 const array = [];
                 for (var entrie of j_entries.pokemon_entries) {
-                    console.log("Here");
                     const url = `https://pokeapi.co/api/v2/pokemon/${entrie.entry_number}`
                     const pokemon = await fetch(url, {method: 'GET'});
                     const j_pokemon = await pokemon.json();
 
+                    curr_entries.value++;
                     array.push(j_pokemon);
                 }
 
@@ -49,17 +52,33 @@ export default {
         
         const store = useStore();
         const entries = computed(() => store.state.filtered);
+        const curr_entries = ref(0);
+        const total = ref(0);
 
         fill_array().then(resp => {
             store.commit('set_entries', resp);
         }).catch(err => console.error(err));
 
-        return {entries}
+        return {entries, total, curr_entries}
     }
 }
 </script>
 
 <style scoped>
+.counter {
+    width: 100px;
+    height: 50px;
+
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: auto;
+    margin-bottom: auto;
+}
 .list-container {
     width: min-content;
     height: calc(100% - 24px);
@@ -70,6 +89,8 @@ export default {
 
     border: 2px solid black;
     border-radius: 10px;
+
+    position: relative;
 }
 
 .list {
