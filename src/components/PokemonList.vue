@@ -1,10 +1,7 @@
 <template>
   <div class="list-container">
     <PkmnFilter />
-    <span class="counter" v-if="curr_entries < total">
-        {{ curr_entries}} / <strong>{{ total }}</strong>
-    </span>
-    <ul v-else class="list">
+    <ul class="list">
         <li v-for="e of entries" :key="e">
             <PkmnItem :sprite="e.sprites.front_default" :name="e.name" :types="e.types" :id="e.id" />
         </li>
@@ -17,7 +14,7 @@ import PkmnItem from './PkmnItem.vue';
 import PkmnFilter from './PkmnFilter.vue';
 
 import { useStore } from 'vuex';
-import { computed, ref } from '@vue/runtime-core';
+import { computed, onMounted, ref } from '@vue/runtime-core';
 
 export default {
     name: "PokemonList",
@@ -27,39 +24,52 @@ export default {
     },
 
     setup() {
-        async function fill_array() {
-            try {
-                const url = 'https://pokeapi.co/api/v2/pokedex/1/';
-                const entries = await fetch(url, {method: 'GET'});
-                const j_entries = await entries.json();
-                total.value = j_entries.pokemon_entries.length;
-
-                const array = [];
-                for (var entrie of j_entries.pokemon_entries) {
-                    const url = `https://pokeapi.co/api/v2/pokemon/${entrie.entry_number}`
-                    const pokemon = await fetch(url, {method: 'GET'});
-                    const j_pokemon = await pokemon.json();
-
-                    curr_entries.value++;
-                    array.push(j_pokemon);
-                }
-
-                return array;
-            } catch(error) {
-                console.error(error);
-            }
-        }
-        
         const store = useStore();
-        const entries = computed(() => store.state.filtered);
+        const entries = computed(() => {
+            const es = store.state.filtered
+            console.log(es);
+            return es;
+        });
         const curr_entries = ref(0);
         const total = ref(0);
 
-        fill_array().then(resp => {
-            store.commit('set_entries', resp);
-        }).catch(err => console.error(err));
+        async function fill_array(j_entries, last) {
+            const array = [];
+            var hasFinished = false;
+            for (var i = last; i < last + 10; i++) {
+                if (i >= j_entries.pokemon_entries.length) {
+                    hasFinished = true;
+                    break;
+                }
+                const entrie = j_entries.pokemon_entries[i];
+                const url = `https://pokeapi.co/api/v2/pokemon/${entrie.entry_number}`;
+                const pokemon = await fetch(url, {method: 'GET'});
+                const j_pokemon = await pokemon.json();
 
-        return {entries, total, curr_entries}
+                curr_entries.value++;
+                array.push(j_pokemon);
+                console.log(curr_entries.value);
+            }
+            store.dispatch('add_entries', array);
+
+            if (hasFinished) return;
+            setTimeout(() => {
+                console.log(".");
+                fill_array(j_entries, last + 10)
+            }, 500);
+        }
+
+        onMounted(async () => {
+            store.dispatch('set_entries', []);
+
+            const url = 'https://pokeapi.co/api/v2/pokedex/1/';
+            const entries = await fetch(url, { method: 'GET' });
+            const j_entries = await entries.json();
+
+            fill_array(j_entries, 0);
+        });
+
+        return { entries, total, curr_entries };
     }
 }
 </script>

@@ -14,7 +14,7 @@ export default {
     setup() {
       const setFilter = () => {
         console.log(name.value);
-        store.commit('set_filter', {name: name.value});
+        store.dispatch('set_filter', { name: name.value });
       }
 
       const store = useStore();

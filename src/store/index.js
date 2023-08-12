@@ -2,6 +2,7 @@ import { createStore } from 'vuex'
 
 export default createStore({
   state: {
+    filter: { name: '' },
     entries: [],
     filtered: [],
     current: {},
@@ -10,13 +11,8 @@ export default createStore({
     infoCoords: [6, 0]
   },
   mutations: {
-    set_entries: (state, payload) => {
-      state.entries = payload;
-      state.filtered = payload;
-    },
-
-    set_filter: (state, payload) => {
-      const name = payload.name;
+    apply_filter: (state) => {
+      const name = state.filter.name;
       var result = [];
 
       result = state.entries;
@@ -59,6 +55,22 @@ export default createStore({
         state.moveInfo = '';
         state.infoCoords = [];
       }
+    }
+  },
+  actions: {
+    set_filter: ({ state, commit }, payload) => {
+      state.filter = payload;
+      commit('apply_filter');
+    },
+
+    set_entries: ({ state, commit }, payload) => {
+      state.entries = payload;
+      commit('apply_filter');
+    },
+
+    add_entries: ({ state, commit }, payload) => {
+      state.entries.push(...payload);
+      commit('apply_filter');
     }
   }
 });
